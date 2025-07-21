@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "template-cli"
+version = "1.0.3"
+description = "Generic template for a CLI application using Click"
+readme = ""
+authors = [
+  { name="Valerio Luzzi", email="valerio.luzzi@gecosistema.com" }
+]
+license = { text = "MIT" }
+keywords = []
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+
+dependencies = [
+  "requests",
+  "click",
+  "boto3"
+]
+
+[project.optional-dependencies]
+pygeoapi = [
+  "pygeoapi",
+]
+
+[project.urls]
+Homepage = "https://github.com/saferplaces/template-cli"
+
+[project.scripts]
+template-cli = "template_cli.main:main_click"
+template_cli = "template_cli.main:main_click"
+
+[tool.setuptools]
+packages = ["template_cli", "template_pygeoapi"]
+package-dir = {"" = "src"}
