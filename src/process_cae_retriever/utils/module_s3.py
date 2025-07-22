@@ -29,11 +29,15 @@ import tempfile
 import fnmatch
 import boto3
 import requests
+import logging
 from requests.exceptions import RequestException
 from botocore.exceptions import ClientError, NoCredentialsError
 from .filesystem import justext, justpath, justfname, forceext
 from .strings import startswith
-from .module_log import Logger
+from ..cli.module_log import Logger
+
+logging.getLogger("botocore").setLevel(logging.CRITICAL)
+logging.getLogger("boto3").setLevel(logging.CRITICAL)
 
 shpext = ("shp", "dbf", "shx", "prj", "qml", "qix", "qlr", "mta", "qmd", "cpg")
 
@@ -457,3 +461,7 @@ def delete(uri, client=None):
     elif os.path.isdir(uri):
         shutil.rmtree(uri)
     return uri
+
+
+def hive_path(hive_dict):
+    return '/'.join([f"{k}=={v}" for k, v in hive_dict.items()])

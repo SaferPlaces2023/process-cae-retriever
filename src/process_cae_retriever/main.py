@@ -24,12 +24,11 @@
 # -----------------------------------------------------------------------------
 import click
 
-from .module_s3 import copy
-from .module_args import check_args
-from .module_prologo import prologo, epilogo
+from .utils.module_prologo import prologo, epilogo
 
 
 @click.command()
+
 # -----------------------------------------------------------------------------
 # Specific options of your CLI application
 # -----------------------------------------------------------------------------
@@ -37,21 +36,21 @@ from .module_prologo import prologo, epilogo
 @click.option('--water', type=click.STRING, required=False, help="The input pathname.")
 @click.option('--bbox',  type=click.STRING, help="The input pathname.")
 @click.option('--out',   type=click.STRING, required=False, default=None, help="The output file name.")
+
 # -----------------------------------------------------------------------------
 # Common options to all Gecosistema CLI applications
 # -----------------------------------------------------------------------------
 @click.option('--backend', type=click.STRING, required=False, default=None,
-              help="The backend to use for sending back progress status updates "
-              "to the backend server.")
+              help="The backend to use for sending back progress status updates to the backend server.")
 @click.option('--jid', type=click.STRING, required=False, default=None,
-              help="The job ID to use for sending back progress status updates "
-              "to the backend server. If not provided, it will be generated automatically.")
+              help="The job ID to use for sending back progress status updates to the backend server. If not provided, it will be generated automatically.")
 @click.option('--version', is_flag=True, required=False, default=False,
               help="Show the version of the package.")
 @click.option('--debug', is_flag=True, required=False, default=False,
               help="Debug mode.")
 @click.option('--verbose', is_flag=True, required=False, default=False,
               help="Print some words more about what is doing.")
+
 def main_click(**kwargs):
     """
     Bla bla bla ...
@@ -59,45 +58,28 @@ def main_click(**kwargs):
     return main_python(**kwargs)
 
 
-def main_python(dem,
-                water=None,
-                out=None,
-                bbox=None,
-                # --- Common options ---
-                backend=None,
-                jid=None,
-                version=False,
-                debug=False,
-                verbose=False):
+def main_python(
+    # --- Common options ---
+    backend=None,
+    jid=None,
+    version=False,
+    debug=False,
+    verbose=False
+):
     """
     main_python - main function
     """
-    # -- Init the logger ---
-    # set jid to the process ID if not provided
-    # manage --version --verbose --debug options
+
+    # DOC: Start job
     t0, jid = prologo(backend, jid, version, verbose, debug)
 
-    # -- The arguments check id deferred here to be shared with lambda functions 
-    # or other entry points that may not use Click
-    res = check_args(dem, water, out, bbox)
-    if res and res["statusCode"] != 200:
-        epilogo(t0, backend, jid)
-        return res
+    # DOC: check args here
+    # ...
+    
+    # DOC: do your stuff here
+    # ...
 
-    # -- Do the job!! ---
-    click.echo(click.style("Hello world!", fg="bright_green", bold=True))
-
-    filedem = copy(dem)
-    click.echo(click.style(
-        f"Copied file: {filedem}", fg="bright_blue", bold=True))
-
-    filewd = copy(water)
-    click.echo(click.style(
-        f"Copied file: {filewd}", fg="bright_blue", bold=True))
-    # ---
-
-    # -------------------------------------------------------------------------
-    # Cleanup the temporary files if needed
+    # DOC: at the end
     epilogo(t0, backend, jid)
 
-    return res
+    return

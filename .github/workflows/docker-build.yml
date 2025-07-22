@@ -80,7 +80,7 @@ jobs:
         ECR_REPO: ${{ secrets.ECR_REPOSITORY_NAME }}
         TAG: ${{ env.tag }}
       run: |
-        fname=template-cli
+        fname=process-cae-retriever
         image=$ECR_REPO:$TAG
         image_config='{"EntryPoint":["python","-m","awslambdaric"],"Command":["lambda_function.lambda_handler"]}'
         

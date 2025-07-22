@@ -30,6 +30,7 @@ def get_version():
     get_version
     """
     try:
-        return version(__package__)
+        package_name = __package__.split('.')[0]  # Get the top-level package name
+        return version(package_name)
     except PackageNotFoundError:
         return "unknown"

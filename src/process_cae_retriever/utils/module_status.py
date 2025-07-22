@@ -25,7 +25,7 @@
 import json
 import requests
 import datetime
-from .module_log import Logger
+from ..cli.module_log import Logger
 
 
 def patch(url, data):

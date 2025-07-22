@@ -26,11 +26,11 @@
 import os
 import sys
 import logging
-from .module_log import Logger
+from ..cli.module_log import Logger
+from ..cli.module_version import get_version
+from ..cli.module_logo import logo
 from .filesystem import now,total_seconds_from
 from .module_s3 import clean
-from .module_version import get_version
-from .module_logo import logo
 from .module_status import set_status
 
 def prologo(backend, jid, version, verbose, debug):

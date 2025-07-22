@@ -24,9 +24,34 @@
 # -----------------------------------------------------------------------------
 import logging
 
-
-# logging.basicConfig(format="[%(asctime)s][%(levelname)-8s] %(message)s")
+# Configure the logger
 logging.basicConfig(format="[%(levelname)-8s] %(message)s")
+
 Logger = logging.getLogger(__name__)
 Logger.setLevel(logging.WARNING)
 
+# Some functions
+def set_log_debug():
+    """Set the logger to debug level."""
+    Logger.setLevel(logging.DEBUG)
+    Logger.debug("Logger set to DEBUG level.")
+
+def set_log_info():
+    """Set the logger to info level."""
+    Logger.setLevel(logging.INFO)
+    Logger.info("Logger set to INFO level.")
+
+def set_log_warning():
+    """Set the logger to warning level."""
+    Logger.setLevel(logging.WARNING)
+    Logger.warning("Logger set to WARNING level.")
+
+def set_log_error():
+    """Set the logger to error level."""
+    Logger.setLevel(logging.ERROR)
+    Logger.error("Logger set to ERROR level.")
+
+def set_log_critical():
+    """Set the logger to critical level."""
+    Logger.setLevel(logging.CRITICAL)
+    Logger.critical("Logger set to CRITICAL level.")

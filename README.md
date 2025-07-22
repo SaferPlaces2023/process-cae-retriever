@@ -1,10 +1,9 @@
-# template-cli
+# Process CAE Retriever
 
-**template-cli** is a base **template** to start an easy **Python** command-line program. 
+**process-cae-retriever** is a script with an optional PyGeoAPI Process implementation to retrieve CAE sensor data.
 
-**template_pygeoapi** is the optional support for a pygeoapi process
 ```
-pip install template-cli[pygeoapi] 
+pip install process-cae-retriever[pygeoapi] 
 
 pip install .[pygeoapi]
 ```
