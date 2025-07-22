@@ -35,8 +35,8 @@ pygeoapi = [
 Homepage = "https://github.com/saferplaces/process-cae-retriever"
 
 [project.scripts]
-cae-retriever = "process_cae_retriever.main:main_python"
-cae_retriever = "process_cae_retriever.main:main_python"
+cae-retriever = "process_cae_retriever.main:cli_run_cae_retriever"
+cae_retriever = "process_cae_retriever.main:cli_run_cae_retriever"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

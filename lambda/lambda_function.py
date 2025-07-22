@@ -1,5 +1,5 @@
 from process_cae_retriever import parse_event
-from process_cae_retriever import main_python as main_function
+from process_cae_retriever import run_cae_retriever as main_function
 
 
 def lambda_handler(event, context):

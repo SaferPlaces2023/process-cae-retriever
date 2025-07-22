@@ -44,6 +44,8 @@ from ..cli.module_log import Logger, set_log_debug
 from ..utils import filesystem, module_s3
 from ..utils.status_exception import StatusException
 
+from .cae_retriever import _CAERetriever
+
 
 
 PROCESS_METADATA = {
@@ -209,102 +211,102 @@ class CAERetrieverProcessor(BaseProcessor):
         """
 
         token = data.get('token', None)
-        lat_range = data.get('lat_range', None)
-        long_range = data.get('long_range', None)
-        time_range = data.get('time_range', None)
-        time_start = time_range[0] if type(time_range) in [list, tuple] else time_range
-        time_end = time_range[1] if type(time_range) in [list, tuple] else None
-        filters = data.get('filters', None)
-        out_format = data.get('out_format', None)
-        bucket_destination = data.get('bucket_destination', None)
+        # lat_range = data.get('lat_range', None)
+        # long_range = data.get('long_range', None)
+        # time_range = data.get('time_range', None)
+        # time_start = time_range[0] if type(time_range) in [list, tuple] else time_range
+        # time_end = time_range[1] if type(time_range) in [list, tuple] else None
+        # filters = data.get('filters', None)
+        # out_format = data.get('out_format', None)
+        # bucket_destination = data.get('bucket_destination', None)
         debug = data.get('debug', False)
 
         if token is None or token != os.getenv("INT_API_TOKEN", "token"):
             raise StatusException(StatusException.DENIED, 'ACCESS DENIED: wrong token')
         
-        if lat_range is None:
-            raise StatusException(StatusException.INVALID, 'Cannot process without a lat_range')
-        if type(lat_range) is not list or len(lat_range) != 2:
-            raise StatusException(StatusException.INVALID, 'lat_range must be a list of 2 elements')
-        if type(lat_range[0]) not in [int, float] or type(lat_range[1]) not in [int, float]:
-            raise StatusException(StatusException.INVALID, 'lat_range elements must be float')
-        if lat_range[0] < -90 or lat_range[0] > 90 or lat_range[1] < -90 or lat_range[1] > 90:
-            raise StatusException(StatusException.INVALID, 'lat_range elements must be in the range [-90, 90]')
-        if lat_range[0] > lat_range[1]:
-            raise StatusException(StatusException.INVALID, 'lat_range[0] must be less than lat_range[1]')
+        # if lat_range is None:
+        #     raise StatusException(StatusException.INVALID, 'Cannot process without a lat_range')
+        # if type(lat_range) is not list or len(lat_range) != 2:
+        #     raise StatusException(StatusException.INVALID, 'lat_range must be a list of 2 elements')
+        # if type(lat_range[0]) not in [int, float] or type(lat_range[1]) not in [int, float]:
+        #     raise StatusException(StatusException.INVALID, 'lat_range elements must be float')
+        # if lat_range[0] < -90 or lat_range[0] > 90 or lat_range[1] < -90 or lat_range[1] > 90:
+        #     raise StatusException(StatusException.INVALID, 'lat_range elements must be in the range [-90, 90]')
+        # if lat_range[0] > lat_range[1]:
+        #     raise StatusException(StatusException.INVALID, 'lat_range[0] must be less than lat_range[1]')
         
-        if long_range is None:
-            raise StatusException(StatusException.INVALID, 'Cannot process without a long_range')
-        if type(long_range) is not list or len(long_range) != 2:
-            raise StatusException(StatusException.INVALID, 'long_range must be a list of 2 elements')
-        if type(long_range[0]) not in [int, float] or type(long_range[1]) not in [int, float]:
-            raise StatusException(StatusException.INVALID, 'long_range elements must be float')
-        if long_range[0] < -180 or long_range[0] > 180 or long_range[1] < -180 or long_range[1] > 180:
-            raise StatusException(StatusException.INVALID, 'long_range elements must be in the range [-180, 180]')
-        if long_range[0] > long_range[1]:
-            raise StatusException(StatusException.INVALID, 'long_range[0] must be less than long_range[1]')
+        # if long_range is None:
+        #     raise StatusException(StatusException.INVALID, 'Cannot process without a long_range')
+        # if type(long_range) is not list or len(long_range) != 2:
+        #     raise StatusException(StatusException.INVALID, 'long_range must be a list of 2 elements')
+        # if type(long_range[0]) not in [int, float] or type(long_range[1]) not in [int, float]:
+        #     raise StatusException(StatusException.INVALID, 'long_range elements must be float')
+        # if long_range[0] < -180 or long_range[0] > 180 or long_range[1] < -180 or long_range[1] > 180:
+        #     raise StatusException(StatusException.INVALID, 'long_range elements must be in the range [-180, 180]')
+        # if long_range[0] > long_range[1]:
+        #     raise StatusException(StatusException.INVALID, 'long_range[0] must be less than long_range[1]')
         
-        if time_start is None:
-            raise StatusException(StatusException.INVALID, 'Cannot process without a time valued')
-        if type(time_start) is not str:
-            raise StatusException(StatusException.INVALID, 'time_start must be a string')
-        if type(time_start) is str:
-            try:
-                time_start = datetime.datetime.fromisoformat(time_start)
-            except ValueError:
-                raise StatusException(StatusException.INVALID, 'time_start must be a valid datetime iso-format string')
+        # if time_start is None:
+        #     raise StatusException(StatusException.INVALID, 'Cannot process without a time valued')
+        # if type(time_start) is not str:
+        #     raise StatusException(StatusException.INVALID, 'time_start must be a string')
+        # if type(time_start) is str:
+        #     try:
+        #         time_start = datetime.datetime.fromisoformat(time_start)
+        #     except ValueError:
+        #         raise StatusException(StatusException.INVALID, 'time_start must be a valid datetime iso-format string')
         
-        if time_end is not None:
-            if type(time_end) is not str:
-                raise StatusException(StatusException.INVALID, 'time_end must be a string')
-            if type(time_end) is str:
-                try:
-                    time_end = datetime.datetime.fromisoformat(time_end)
-                except ValueError:
-                    raise StatusException(StatusException.INVALID, 'time_end must be a valid datetime iso-format string')
-            if time_start > time_end:
-                raise StatusException(StatusException.INVALID, 'time_start must be less than time_end')
+        # if time_end is not None:
+        #     if type(time_end) is not str:
+        #         raise StatusException(StatusException.INVALID, 'time_end must be a string')
+        #     if type(time_end) is str:
+        #         try:
+        #             time_end = datetime.datetime.fromisoformat(time_end)
+        #         except ValueError:
+        #             raise StatusException(StatusException.INVALID, 'time_end must be a valid datetime iso-format string')
+        #     if time_start > time_end:
+        #         raise StatusException(StatusException.INVALID, 'time_start must be less than time_end')
             
-        if filters is not None:
-            if type(filters) is not dict:
-                raise StatusException(StatusException.INVALID, 'filters must be a dictionary')
-            for fkey, fvalue in filters.items():
-                if type(fvalue) not in [str, list]:
-                    raise StatusException(StatusException.INVALID, f'filter {fkey} must be a string or a list of strings')
-                if type(fvalue) is str:
-                    filters[fkey] = [fvalue]
-                elif type(fvalue) is list:
-                    for fitem in fvalue:
-                        if type(fitem) is not str:
-                            raise StatusException(StatusException.INVALID, f'filter {fkey} items must be strings')
+        # if filters is not None:
+        #     if type(filters) is not dict:
+        #         raise StatusException(StatusException.INVALID, 'filters must be a dictionary')
+        #     for fkey, fvalue in filters.items():
+        #         if type(fvalue) not in [str, list]:
+        #             raise StatusException(StatusException.INVALID, f'filter {fkey} must be a string or a list of strings')
+        #         if type(fvalue) is str:
+        #             filters[fkey] = [fvalue]
+        #         elif type(fvalue) is list:
+        #             for fitem in fvalue:
+        #                 if type(fitem) is not str:
+        #                     raise StatusException(StatusException.INVALID, f'filter {fkey} items must be strings')
             
-        if type(out_format) is not str:
-            raise StatusException(StatusException.INVALID, 'out_format must be a string or null')
-        if out_format not in ['geojson']:
-            raise StatusException(StatusException.INVALID, 'out_format must be one of ["geojson"]')
+        # if type(out_format) is not str:
+        #     raise StatusException(StatusException.INVALID, 'out_format must be a string or null')
+        # if out_format not in ['geojson']:
+        #     raise StatusException(StatusException.INVALID, 'out_format must be one of ["geojson"]')
         
-        if bucket_destination is not None:
-            if type(bucket_destination) is not str:
-                raise StatusException(StatusException.INVALID, 'bucket_destination must be a string')
-            if not bucket_destination.startswith('s3://'):
-                raise StatusException(StatusException.INVALID, 'bucket_destination must start with "s3://"')
+        # if bucket_destination is not None:
+        #     if type(bucket_destination) is not str:
+        #         raise StatusException(StatusException.INVALID, 'bucket_destination must be a string')
+        #     if not bucket_destination.startswith('s3://'):
+        #         raise StatusException(StatusException.INVALID, 'bucket_destination must start with "s3://"')
             
         if type(debug) is not bool:
             raise StatusException(StatusException.INVALID, 'debug must be a boolean')
         if debug:
             set_log_debug()
 
-        return {
-            'token': token,
-            'lat_range': lat_range,
-            'long_range': long_range,
-            'time_start': time_start,
-            'time_end': time_end,
-            'filters': filters,
-            'out_format': out_format,
-            'bucket_destination': bucket_destination,
-            'debug': debug
-        }
+        # return {
+        #     'token': token,
+        #     # 'lat_range': lat_range,
+        #     # 'long_range': long_range,
+        #     # 'time_start': time_start,
+        #     # 'time_end': time_end,
+        #     # 'filters': filters,
+        #     # 'out_format': out_format,
+        #     # 'bucket_destination': bucket_destination,
+        #     'debug': debug
+        # }
     
 
     def retrieve_data(self, long_range, lat_range, time_start, time_end, filters):
@@ -506,54 +508,60 @@ class CAERetrieverProcessor(BaseProcessor):
 
         outputs = {}
 
+        CAERetriever = _CAERetriever()
+
         try:
             
             # DOC: Args validation
             validated_data = self.argument_validation(data)
-            token = validated_data['token']
-            lat_range = validated_data['lat_range']
-            long_range = validated_data['long_range']
-            time_start = validated_data['time_start']
-            time_end = validated_data['time_end']
-            filters = validated_data['filters']
-            out_format = validated_data['out_format']
-            bucket_destination = validated_data['bucket_destination']
-            debug = validated_data['debug']
-            Logger.debug(f"Validated data: {validated_data}")
+            # token = validated_data['token']
+            # lat_range = validated_data['lat_range']
+            # long_range = validated_data['long_range']
+            # time_start = validated_data['time_start']
+            # time_end = validated_data['time_end']
+            # filters = validated_data['filters']
+            # out_format = validated_data['out_format']
+            # bucket_destination = validated_data['bucket_destination']
+            # debug = validated_data['debug']
+            # Logger.debug(f"Validated data: {validated_data}")
 
-            # DOC: Retrieve data
-            sensors_gdf = self.retrieve_data(long_range, lat_range, time_start, time_end, filters)
+            # # DOC: Retrieve data
+            # sensors_gdf = self.retrieve_data(long_range, lat_range, time_start, time_end, filters)
+            # Logger.debug(f"Retrieved {len(sensors_gdf)} sensors data")
 
-            # DOC: Build feature collection
-            feature_collection = self.data_to_feature_collection(sensors_gdf)
-            feature_collection_fn = f'{self.name}__{time_start.isoformat()}__{time_end.isoformat() if time_end else datetime.datetime.now(tz=datetime.timezone.utc).isoformat()}.geojson'
-            feature_collection_fp = os.path.join(self._tmp_data_folder, feature_collection_fn)
-            with open(feature_collection_fp, 'w') as f:
-                json.dump(feature_collection, f)
-            Logger.debug(f"Feature collection saved to {feature_collection_fp}")
+            # # DOC: Build feature collection
+            # feature_collection = self.data_to_feature_collection(sensors_gdf)
+            # feature_collection_fn = f'{self.name}__{time_start.isoformat()}__{time_end.isoformat() if time_end else datetime.datetime.now(tz=datetime.timezone.utc).isoformat()}.geojson'
+            # feature_collection_fp = os.path.join(self._tmp_data_folder, feature_collection_fn)
+            # with open(feature_collection_fp, 'w') as f:
+            #     json.dump(feature_collection, f)
+            # Logger.debug(f"Feature collection saved to {feature_collection_fp}")
 
-            # DOC: Store data in bucket if bucket_destination is provided
-            if bucket_destination is not None:
-                bucket_path = os.path.join(bucket_destination, feature_collection_fn)
-                module_s3.s3_upload(feature_collection_fn, bucket_path)
-                Logger.debug(f"Data stored in bucket: {bucket_path}")
+            # # DOC: Store data in bucket if bucket_destination is provided
+            # if bucket_destination is not None:
+            #     bucket_path = os.path.join(bucket_destination, feature_collection_fn)
+            #     module_s3.s3_upload(feature_collection_fn, bucket_path)
+            #     Logger.debug(f"Data stored in bucket: {bucket_path}")
 
-            # DOC: Prepare outputs
-            if out_format == 'geojson':
-                outputs = feature_collection
-            else:
-                if bucket_destination is not None:
-                    outputs = {
-                        'status': 'OK',
-                        'uri': bucket_path,
-                    }
-                else:
-                    outputs = {
-                        'status': 'OK',
-                        'filepath': feature_collection_fp
-                    }
+            # # DOC: Prepare outputs
+            # if out_format == 'geojson':
+            #     outputs = feature_collection
+            # else:
+            #     if bucket_destination is not None:
+            #         outputs = {
+            #             'status': 'OK',
+            #             'uri': bucket_path,
+            #         }
+            #     else:
+            #         outputs = {
+            #             'status': 'OK',
+            #             'filepath': feature_collection_fp
+            #         }
+            # Logger.debug(f"Outputs prepared")
 
-            Logger.debug(f"Outputs prepared")
+
+            outputs = CAERetriever.run(**data)
+
 
         except StatusException as err:
             outputs = {
