@@ -33,6 +33,7 @@ class _CAERetriever():
     sensor_data_url = lambda self, sensor_id: f'{self.base_url}/v1/data/{sensor_id}'
 
     _tmp_data_folder = os.path.join(os.getcwd(), f'{name}_tmp')
+    _cache_data_folder = os.path.join(os.getcwd(), f'{name}_cache')
 
     def __init__(self):
         # self.name = 'CAERetrieverProcessor'
