@@ -34,48 +34,94 @@ from .utils.module_prologo import prologo, epilogo
 from .cae import _CAERetriever
 
 
+class _ARG_NAMES():
+    LAT_RANGE = {
+        'aliases': ['--lat_range', '--lat', '--latitude_range', '--latitude', '--lt'],
+        'help': "Latitude range as two floats (min, max).",
+        'default': None,
+        'example': '--lat_range 40.0 42.0',
+    }
+    LONG_RANGE = {
+        'aliases': ['--long_range', '--long', '--longitude_range', '--longitude', '--lg'],
+        'help': "Longitude range as two floats (min, max).",
+        'default': None,
+        'example': '--long_range 12.0 14.0',
+    }
+    TIME_RANGE = {
+        'aliases': ['--time_range', '--time', '--datetime_range', '--datetime', '--t'],
+        'help': "Time range as two ISO 8601 UTC0 strings (start, end).",
+        'default': None,
+        'example': '--time_range 2025-07-23T00:00:00 2025-07-24T00:00:00',
+    }
+    FILTERS = {
+        'aliases': ['--filters', '--filter', '--f'],
+        'help': "Filters to apply to the data.",
+        'default': None,
+        'example': '--filters "{\"instrument\": \"Pluviometer\"}"',
+    }
+    OUT = {
+        'aliases': ['--out', '--output', '--o'],
+        'help': "Output file path for the retrieved data. If not provided, the output will be returned as a dictionary.",
+        'default': None,
+        'example': '--out /path/to/output.json',
+    }
+    OUT_FORMAT = {
+        'aliases': ['--out_format', '--output_format', '--of'],
+        'help': "Output format of the retrieved data.",
+        'default': None,
+        'example': '--out_format geojson',
+    }
+    BUCKET_DESTINATION = {
+        'aliases': ['--bucket_destination', '--bucket', '--s3'],
+        'help': "Destination bucket for the output data.",
+        'default': None,
+        'example': '--bucket_destination s3://my-bucket/path/to/prefix',
+    }
+
+
+
 @click.command()
 
 # -----------------------------------------------------------------------------
 # Specific options of your CLI application
 # -----------------------------------------------------------------------------
 @click.option(
-    '--lat_range', 
+    *_ARG_NAMES.LAT_RANGE['aliases'], 
     callback=lambda ctx, param, value: tuple(value) if value else None,
-    type=float, nargs=2, default=None, 
-    help="Latitude range as two floats (min, max)."
+    type=float, nargs=2, default=_ARG_NAMES.LAT_RANGE['default'], 
+    help=_ARG_NAMES.LAT_RANGE['help'],
 )
 @click.option(
-    '--long_range',
+    *_ARG_NAMES.LONG_RANGE['aliases'],
     callback=lambda ctx, param, value: tuple(value) if value else None,
-    type=float, nargs=2, default=None,
-    help="Longitude range as two floats (min, max)."
+    type=float, nargs=2, default=_ARG_NAMES.LONG_RANGE['default'],
+    help=_ARG_NAMES.LONG_RANGE['help'],
 )
 @click.option(
-    '--time_range',
+    *_ARG_NAMES.TIME_RANGE['aliases'],
     callback=lambda ctx, param, value: tuple(value) if value else None,
-    type=str, nargs=2, default=None,
-    help="Time range as two ISO 8601 strings (start, end)."
+    type=str, nargs=2, default=_ARG_NAMES.TIME_RANGE['default'],
+    help=_ARG_NAMES.TIME_RANGE['help'],
 )
 @click.option(
-    '--filters',
-    type=str, default=None, 
-    help="Filters to apply to the data."
+    *_ARG_NAMES.FILTERS['aliases'],
+    type=str, default=_ARG_NAMES.FILTERS['default'], 
+    help=_ARG_NAMES.FILTERS['help'],
 )
 @click.option(
-    '--out',
-    type=str, default=None,
-    help="Output file path for the retrieved data. If not provided, the output will be returned as a dictionary."
+    *_ARG_NAMES.OUT['aliases'],
+    type=str, default=_ARG_NAMES.OUT['default'],
+    help=_ARG_NAMES.OUT['help'],
 )
 @click.option(
-    '--out_format',
-    type=click.Choice(['geojson'], case_sensitive=False), default=None, 
-    help="Output format of the retrieved data."
+    *_ARG_NAMES.OUT_FORMAT['aliases'],
+    type=click.Choice(['geojson'], case_sensitive=False), default=_ARG_NAMES.OUT_FORMAT['default'], 
+    help=_ARG_NAMES.OUT_FORMAT['help'],
 )
 @click.option(
-    '--bucket-destination',
-    type=str, default=None, 
-    help="Destination bucket for the output data."
+    *_ARG_NAMES.BUCKET_DESTINATION['aliases'],
+    type=str, default=_ARG_NAMES.BUCKET_DESTINATION['default'], 
+    help=_ARG_NAMES.BUCKET_DESTINATION['help'],
 )
 
 # -----------------------------------------------------------------------------
