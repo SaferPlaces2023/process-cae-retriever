@@ -416,7 +416,7 @@ class _CAERetriever():
                 if bucket_destination is not None:
                     outputs = {
                         ** outputs,
-                        ** ( {'uri': bucket_uri[0]} if len(bucket_uris) == 1 else {'uris': bucket_uris} )
+                        ** ( {'uri': bucket_uris[0]} if len(bucket_uris) == 1 else {'uris': bucket_uris} )
                     }
                 if out is not None:
                     outputs = {
