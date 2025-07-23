@@ -36,21 +36,10 @@ class _CAERetriever():
     _cache_data_folder = os.path.join(os.getcwd(), f'{name}_cache')
 
     def __init__(self):
-        # self.name = 'CAERetrieverProcessor'
-
-        # # REF: https://arpaebo.caedns.it/datascape/api-doc/index.html (Swagger API Documentation)
-        # self.base_url = 'https://arpaebo.caedns.it/datascape'
-        # self.auth_url = f'{self.base_url}/connect/token'
-        # self.sensor_list_url = f'{self.base_url}/v1/elements'
-        # self.location_url = f'{self.base_url}/v1/locations'
-        # self.sensor_specs_url = lambda sensor_id: f'{self.base_url}/v2/elements/{sensor_id}'
-        # self.sensor_data_url = lambda sensor_id: f'{self.base_url}/v1/data/{sensor_id}'
-
-        # self._tmp_data_folder = os.path.join(os.getcwd(), f'{self.name}_tmp')
+        
         if not os.path.exists(self._tmp_data_folder):
             os.makedirs(self._tmp_data_folder)
-
-        # self._cache_data_folder = os.path.join(os.getcwd(), f'{self.name}_cache')
+        
         if not os.path.exists(self._cache_data_folder):
             os.makedirs(self._cache_data_folder)
 
