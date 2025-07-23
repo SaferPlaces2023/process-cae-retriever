@@ -12,7 +12,7 @@ It will install extra dependecies to use you program as a PyGeoAPI process
 
 ## CLI
 
-**Command name**: cae-retriever
+**Command name**: `cae-retriever`
 
 ### Arguments
 
