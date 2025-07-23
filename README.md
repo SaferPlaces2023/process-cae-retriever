@@ -25,7 +25,7 @@ It will install extra dependecies to use you program as a PyGeoAPI process
 | **`--out`**, `--output`, `--o` | Output file path for the retrieved data. If not provided, the output will be returned as a dictionary. | `--out /path/to/output.json` |
 | **`--out_format`**, `--output_format`, `--of` | Output format of the retrieved data. | `--out_format geojson` |
 | **`--bucket_destination`**, `--bucket`, `--s3` | Destination bucket for the output data. | `--bucket_destination s3://my-bucket/path/to/prefix` |
-| **`--version`**, `-v`                    | Print version.                                                                                                                         | --version |
-| **`--debug`**                            | Enable debug mode.                                                                                                                     | --debug |
-| **`--verbose`**                          | Enable verbose mode.                                                                                                                   | --verbose |
-| `--help`                             | Show this message and exit.                                                                                                            | --help |
+| **`--version`**, `-v`                    | Print version.                                                                                                                         | `--version` |
+| **`--debug`**                            | Enable debug mode.                                                                                                                     | `--debug` |
+| **`--verbose`**                          | Enable verbose mode.                                                                                                                   | `--verbose` |
+| `--help`                             | Show this message and exit.                                                                                                            | `--help` |
