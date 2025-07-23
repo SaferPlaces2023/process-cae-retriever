@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import datetime
+import urllib3
 import requests
 
 import pandas as pd
@@ -11,6 +12,9 @@ from shapely.geometry import Point
 from ..cli.module_log import Logger
 from ..utils import filesystem, module_s3
 from ..utils.status_exception import StatusException
+
+
+urllib3.disable_warnings()
 
 
 class _CAERetriever():
@@ -51,28 +55,27 @@ class _CAERetriever():
         filters = kwargs.get('filters', None)
         out_format = kwargs.get('out_format', None)
         bucket_destination = kwargs.get('bucket_destination', None)
+        out = kwargs.get('out', None)
 
-        if lat_range is None:
-            raise StatusException(StatusException.INVALID, 'Cannot process without a lat_range')
-        if type(lat_range) is not list or len(lat_range) != 2:
-            raise StatusException(StatusException.INVALID, 'lat_range must be a list of 2 elements')
-        if type(lat_range[0]) not in [int, float] or type(lat_range[1]) not in [int, float]:
-            raise StatusException(StatusException.INVALID, 'lat_range elements must be float')
-        if lat_range[0] < -90 or lat_range[0] > 90 or lat_range[1] < -90 or lat_range[1] > 90:
-            raise StatusException(StatusException.INVALID, 'lat_range elements must be in the range [-90, 90]')
-        if lat_range[0] > lat_range[1]:
-            raise StatusException(StatusException.INVALID, 'lat_range[0] must be less than lat_range[1]')
+        if lat_range is not None:
+            if type(lat_range) is not list or len(lat_range) != 2:
+                raise StatusException(StatusException.INVALID, 'lat_range must be a list of 2 elements')
+            if type(lat_range[0]) not in [int, float] or type(lat_range[1]) not in [int, float]:
+                raise StatusException(StatusException.INVALID, 'lat_range elements must be float')
+            if lat_range[0] < -90 or lat_range[0] > 90 or lat_range[1] < -90 or lat_range[1] > 90:
+                raise StatusException(StatusException.INVALID, 'lat_range elements must be in the range [-90, 90]')
+            if lat_range[0] > lat_range[1]:
+                raise StatusException(StatusException.INVALID, 'lat_range[0] must be less than lat_range[1]')
         
-        if long_range is None:
-            raise StatusException(StatusException.INVALID, 'Cannot process without a long_range')
-        if type(long_range) is not list or len(long_range) != 2:
-            raise StatusException(StatusException.INVALID, 'long_range must be a list of 2 elements')
-        if type(long_range[0]) not in [int, float] or type(long_range[1]) not in [int, float]:
-            raise StatusException(StatusException.INVALID, 'long_range elements must be float')
-        if long_range[0] < -180 or long_range[0] > 180 or long_range[1] < -180 or long_range[1] > 180:
-            raise StatusException(StatusException.INVALID, 'long_range elements must be in the range [-180, 180]')
-        if long_range[0] > long_range[1]:
-            raise StatusException(StatusException.INVALID, 'long_range[0] must be less than long_range[1]')
+        if long_range is not None:
+            if type(long_range) is not list or len(long_range) != 2:
+                raise StatusException(StatusException.INVALID, 'long_range must be a list of 2 elements')
+            if type(long_range[0]) not in [int, float] or type(long_range[1]) not in [int, float]:
+                raise StatusException(StatusException.INVALID, 'long_range elements must be float')
+            if long_range[0] < -180 or long_range[0] > 180 or long_range[1] < -180 or long_range[1] > 180:
+                raise StatusException(StatusException.INVALID, 'long_range elements must be in the range [-180, 180]')
+            if long_range[0] > long_range[1]:
+                raise StatusException(StatusException.INVALID, 'long_range[0] must be less than long_range[1]')
         
         if time_start is None:
             raise StatusException(StatusException.INVALID, 'Cannot process without a time valued')
@@ -107,17 +110,29 @@ class _CAERetriever():
                     for fitem in fvalue:
                         if type(fitem) is not str:
                             raise StatusException(StatusException.INVALID, f'filter {fkey} items must be strings')
-            
-        if type(out_format) is not str:
-            raise StatusException(StatusException.INVALID, 'out_format must be a string or null')
-        if out_format not in ['geojson']:
-            raise StatusException(StatusException.INVALID, 'out_format must be one of ["geojson"]')
+
+        if out_format is not None:  
+            if type(out_format) is not str:
+                raise StatusException(StatusException.INVALID, 'out_format must be a string or null')
+            if out_format not in ['geojson']:
+                raise StatusException(StatusException.INVALID, 'out_format must be one of ["geojson"]')
+        else:
+            out_format = 'geojson'
         
         if bucket_destination is not None:
             if type(bucket_destination) is not str:
                 raise StatusException(StatusException.INVALID, 'bucket_destination must be a string')
             if not bucket_destination.startswith('s3://'):
                 raise StatusException(StatusException.INVALID, 'bucket_destination must start with "s3://"')
+            
+        if out is not None:
+            if type(out) is not str:
+                raise StatusException(StatusException.INVALID, 'out must be a string')
+            if not out.endswith('.geojson'):
+                raise StatusException(StatusException.INVALID, 'out must end with ".geojson"')
+            dirname, _ = os.path.split(out)
+            if dirname != '' and not os.path.exists(dirname):
+                os.makedirs(dirname)
 
         return {
             'lat_range': lat_range,
@@ -126,7 +141,8 @@ class _CAERetriever():
             'time_end': time_end,
             'filters': filters,
             'out_format': out_format,
-            'bucket_destination': bucket_destination
+            'bucket_destination': bucket_destination,
+            'out': out
         }
     
 
@@ -182,7 +198,7 @@ class _CAERetriever():
             sensors_df = sensors_df.merge(locations_df, on='stationId', how='left')
             # DOC: Retrieve sensor informations - 3 - Get the sensor specifications
             sensors_specs = []
-            for sensor_id in sensors_df['id'].unique():
+            for sensor_id in sensors_df['elementId'].unique():
                 sensor_specs_response = requests.get(self.sensor_specs_url(sensor_id), headers=auth_headers, verify=False)
                 if not sensor_specs_response.ok:
                     raise StatusException(StatusException.ERROR, f'Error retrieving sensor specifications from {self.sensor_specs_url(sensor_id)}: {sensor_specs_response.status_code} - {sensor_specs_response.text}')
@@ -227,20 +243,22 @@ class _CAERetriever():
         
         # DOC: Retrieve sensor data
         sensors_gdf['data'] = None
-        for sensor_id in sensors_gdf['id'].unique():
+        sensors_gdf['data'] = sensors_gdf['data'].astype(object)
+        for r_idx, row in sensors_gdf.iterrows():
+            sensor_id = row['elementId']
             params = {
                 'from': time_start.replace(tzinfo=datetime.timezone.utc).isoformat(),
                 ** ( {'to': time_end.replace(tzinfo=datetime.timezone.utc).isoformat() } if time_end else dict() ),
                 'outUtcOffset': '+00:00',
                 'part': ['IsoTime', 'Value', 'Quality']
             }
-            sensor_data_response = requests.get(self.sensor_data_url, headers=auth_headers, params=params, verify=False)
+            sensor_data_response = requests.get(self.sensor_data_url(sensor_id), headers=auth_headers, params=params, verify=False)
             if not sensor_data_response.ok:
                 raise StatusException(StatusException.ERROR, f'Error retrieving sensor data from {self.sensor_data_url(sensor_id)}: {sensor_data_response.status_code} - {sensor_data_response.text}')
             sensor_data = sensor_data_response.json()
             sensor_data_df = pd.DataFrame(sensor_data, columns=['IsoTime', 'Value', 'Quality'])
             sensor_data_df = sensor_data_df[sensor_data_df['Value'].notnull()]
-            sensors_gdf.at[sensors_gdf['id'] == sensor_id, 'data'] = [(dt.replace(tzinfo=None), val) for dt,val in zip(sensor_data_df['IsoTime'], sensor_data_df['Value'])]
+            sensors_gdf.at[r_idx, 'data'] = [(datetime.datetime.fromisoformat(dt).replace(tzinfo=None), val) for dt,val in zip(sensor_data_df['IsoTime'], sensor_data_df['Value'])]
             Logger.debug(f'Retrieved {len(sensor_data_df)} data points for sensor {sensor_id}')
 
         return sensors_gdf
@@ -303,7 +321,7 @@ class _CAERetriever():
                     'element_name': row['elementName'],
                     'station_id': row['stationId'],
                     'station_name': row['stationName'],
-                    'um': row['um'],
+                    'um': row['measUnit'],
                     'instrument': row['instrument'],
                     row['quantity']: [(dt.isoformat(), val) for dt,val in row['data']]
                 }
@@ -330,71 +348,92 @@ class _CAERetriever():
         filters = None,
         out_format = None,
         bucket_destination = None,
+        out = None
     ):
         
         """
         Run the CAE Retriever.
         """
 
-        # DOC: Validate the arguments
-        validated_args = self.argument_validation(
-            lat_range=lat_range,
-            long_range=long_range,
-            time_range=time_range,
-            filters=filters,
-            out_format=out_format,
-            bucket_destination=bucket_destination
-        )
-        lat_range = validated_args['lat_range']
-        long_range = validated_args['long_range']
-        time_start = validated_args['time_start']
-        time_end = validated_args['time_end']
-        filters = validated_args['filters']
-        out_format = validated_args['out_format']
-        bucket_destination = validated_args['bucket_destination']
-        Logger.debug(f"Running CAE Retriever with parameters: {validated_args}")
+        try:
 
-        # DOC: Retrieve data from CAE API
-        sensors_gdf = self.retrieve_data(
-            long_range=long_range,
-            lat_range=lat_range,
-            time_start=time_start,
-            time_end=time_end,
-            filters=filters
-        )
-        Logger.debug(f"Retrieved {len(sensors_gdf)} sensors data from CAE API")
+            # DOC: Validate the arguments
+            validated_args = self.argument_validation(
+                lat_range=lat_range,
+                long_range=long_range,
+                time_range=time_range,
+                filters=filters,
+                out=out,
+                out_format=out_format,
+                bucket_destination=bucket_destination,
+            )
+            lat_range = validated_args['lat_range']
+            long_range = validated_args['long_range']
+            time_start = validated_args['time_start']
+            time_end = validated_args['time_end']
+            filters = validated_args['filters']
+            out_format = validated_args['out_format']
+            out = validated_args['out']
+            bucket_destination = validated_args['bucket_destination']
+            Logger.debug(f"Running CAE Retriever with parameters: {validated_args}")
 
-        # DOC: Build feature collection
-        feature_collection = self.data_to_feature_collection(sensors_gdf)
-        feature_collection_fn = f'{self.name}__{time_start.isoformat()}__{time_end.isoformat() if time_end else datetime.datetime.now(tz=datetime.timezone.utc).isoformat()}.geojson'
-        feature_collection_fp = os.path.join(self._tmp_data_folder, feature_collection_fn)
-        with open(feature_collection_fp, 'w') as f:
-            json.dump(feature_collection, f)
-        Logger.debug(f"Feature collection saved to {feature_collection_fp}")
+            # DOC: Retrieve data from CAE API
+            sensors_gdf = self.retrieve_data(
+                long_range=long_range,
+                lat_range=lat_range,
+                time_start=time_start,
+                time_end=time_end,
+                filters=filters
+            )
+            Logger.debug(f"Retrieved {len(sensors_gdf)} sensors data from CAE API")
 
-        # DOC: Store data in bucket if bucket_destination is provided
-        if bucket_destination is not None:
-            bucket_path = os.path.join(bucket_destination, feature_collection_fn)
-            module_s3.s3_upload(feature_collection_fn, bucket_path)
-            Logger.debug(f"Data stored in bucket: {bucket_path}")
+            # DOC: Build feature collection
+            if out_format == 'geojson':
+                feature_collection = self.data_to_feature_collection(sensors_gdf)
+                feature_collection_fn = filesystem.normpath(f'{self.name}__{time_start.isoformat()}__{time_end.isoformat() if time_end else datetime.datetime.now(tz=datetime.timezone.utc).isoformat()}.geojson')
+                feature_collection_fp = os.path.join(self._tmp_data_folder, feature_collection_fn) if out is None else out
+                with open(feature_collection_fp, 'w') as f:
+                    json.dump(feature_collection, f)
+                output_filespaths = [feature_collection_fp]
+                Logger.debug(f"Feature collection saved to {feature_collection_fp}")
 
-        # DOC: Prepare outputs
-        if out_format == 'geojson':
-            outputs = feature_collection
-        else:
+            # DOC: Store data in bucket if bucket_destination is provided
             if bucket_destination is not None:
-                outputs = {
-                    'status': 'OK',
-                    'uri': bucket_path,
-                }
+                bucket_uris = []
+                for output_filepath in output_filespaths:
+                    output_filename = os.path.basename(output_filepath)
+                    bucket_uri = f'{bucket_destination}/{output_filename}'
+                    upload_status = module_s3.s3_upload(output_filename, bucket_uri)
+                    if not upload_status:
+                        raise StatusException(StatusException.ERROR, f"Failed to upload data to bucket {bucket_destination}")
+                    bucket_uris.append(bucket_uri)
+                    Logger.debug(f"Data stored in bucket: {bucket_uri}")
+
+            # DOC: Prepare outputs
+            if bucket_destination is not None or out is not None:
+                outputs = { 'status': 'OK' }
+                if bucket_destination is not None:
+                    outputs = {
+                        ** outputs,
+                        ** ( {'uri': bucket_uri[0]} if len(bucket_uris) == 1 else {'uris': bucket_uris} )
+                    }
+                if out is not None:
+                    outputs = {
+                        ** outputs,
+                        ** ( {'filepath': output_filespaths[0]} if len(output_filespaths) == 1 else {'filepaths': output_filespaths} )
+                    }
             else:
-                outputs = {
-                    'status': 'OK',
-                    'filepath': feature_collection_fp
-                }
-        Logger.debug(f"Outputs prepared")
+                outputs = sensors_gdf
+            Logger.debug(f"Outputs prepared")
 
-        filesystem.garbage_folders(self._tmp_data_folder)
-        Logger.debug(f'Cleaned up temporary data folder: {self._tmp_data_folder}')
+            # DOC: Clean up temporary data folder
+            filesystem.garbage_folders(self._tmp_data_folder)
+            Logger.debug(f'Cleaned up temporary data folder: {self._tmp_data_folder}')
 
-        return outputs
+            return outputs
+    
+        except Exception as ex:
+            # DOC: Clean up temporary data folder and forward exception
+            filesystem.garbage_folders(self._tmp_data_folder)
+            Logger.debug(f'Cleaned up temporary data folder: {self._tmp_data_folder} before raising exception')
+            raise ex

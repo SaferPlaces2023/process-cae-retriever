@@ -29,6 +29,7 @@ import shutil
 import datetime
 import tempfile
 import hashlib
+import platform
 
 
 def now():
@@ -45,13 +46,42 @@ def total_seconds_from(t):
     return (datetime.datetime.now() - t).total_seconds()
 
 
+def is_windows():
+    """
+    is_windows - Check if the current platform is Windows
+    """
+    return platform.system() == "Windows"
+
+def is_linux():
+    """
+    is_linux - Check if the current platform is Linux
+    """
+    return platform.system() == "Linux"
+
+def is_mac():
+    """
+    is_mac - Check if the current platform is macOS
+    """
+    return platform.system() == "Darwin"
+
+def is_unix():
+    """
+    is_unix - Check if the current platform is Unix-like (Linux or macOS)
+    """
+    return is_linux() or is_mac()
+
+
 def normpath(pathname):
     """
     normpath
     """
     if not pathname:
         return ""
-    return os.path.normpath(pathname.replace("\\", "/")).replace("\\", "/")
+    pathname = os.path.normpath(pathname.replace("\\", "/")).replace("\\", "/")
+    if is_windows():
+        dirname, filename = os.path.split(pathname)
+        pathname = os.path.join(dirname, filename.replace(':','_'))
+    return pathname
 
 
 def juststem(pathname):

@@ -25,6 +25,7 @@
 import click
 import pprint
 import traceback
+import json
 
 from .cli.module_log import Logger
 from .utils.status_exception import StatusException
@@ -45,7 +46,7 @@ from .cae import _CAERetriever
     help="Latitude range as two floats (min, max)."
 )
 @click.option(
-    '--lon_range',
+    '--long_range',
     callback=lambda ctx, param, value: tuple(value) if value else None,
     type=float, nargs=2, default=None,
     help="Longitude range as two floats (min, max)."
@@ -60,6 +61,11 @@ from .cae import _CAERetriever
     '--filters',
     type=str, default=None, 
     help="Filters to apply to the data."
+)
+@click.option(
+    '--out',
+    type=str, default=None,
+    help="Output file path for the retrieved data. If not provided, the output will be returned as a dictionary."
 )
 @click.option(
     '--out_format',
@@ -114,16 +120,15 @@ def cli_run_cae_retriever(**kwargs):
 
 def run_cae_retriever(
     # --- Specific options ---
-
     lat_range = None,
-    lon_range = None,
+    long_range = None,
     time_range = None,
     filters = None,
+    out = None,
     out_format = None,
     bucket_destination = None,
 
     # --- Common options ---
-    
     backend = None,
     jid = None,
     version = False,
@@ -143,11 +148,12 @@ def run_cae_retriever(
         CAERetriever = _CAERetriever()
         results = CAERetriever.run(
             lat_range=lat_range,
-            lon_range=lon_range,
+            long_range=long_range,
             time_range=time_range,
             filters=filters,
+            out=out,
             out_format=out_format,
-            bucket_destination=bucket_destination
+            bucket_destination=bucket_destination,
         )
 
     except StatusException as err:
@@ -159,7 +165,7 @@ def run_cae_retriever(
             }
         }
     except Exception as e:
-        result = {
+        results = {
             "status": StatusException.ERROR,
             "body": {
                 "error": str(e),
