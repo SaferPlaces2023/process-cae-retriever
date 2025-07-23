@@ -404,7 +404,7 @@ class _CAERetriever():
                 for output_filepath in output_filespaths:
                     output_filename = os.path.basename(output_filepath)
                     bucket_uri = f'{bucket_destination}/{output_filename}'
-                    upload_status = module_s3.s3_upload(output_filename, bucket_uri)
+                    upload_status = module_s3.s3_upload(output_filepath, bucket_uri)
                     if not upload_status:
                         raise StatusException(StatusException.ERROR, f"Failed to upload data to bucket {bucket_destination}")
                     bucket_uris.append(bucket_uri)
