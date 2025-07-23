@@ -348,7 +348,8 @@ class _CAERetriever():
         filters = None,
         out_format = None,
         bucket_destination = None,
-        out = None
+        out = None,
+        **kwargs
     ):
         
         """
