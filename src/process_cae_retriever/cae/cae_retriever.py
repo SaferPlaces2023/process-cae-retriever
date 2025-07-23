@@ -22,22 +22,34 @@ class _CAERetriever():
     Class to retrieve data from CAE sensors.
     """
 
+    name = 'CAERetrieverProcessor'
+
+    # REF: https://arpaebo.caedns.it/datascape/api-doc/index.html (Swagger API Documentation)
+    base_url = 'https://arpaebo.caedns.it/datascape'
+    auth_url = f'{base_url}/connect/token'
+    sensor_list_url = f'{base_url}/v1/elements'
+    location_url = f'{base_url}/v1/locations'
+    sensor_specs_url = lambda self, sensor_id: f'{self.base_url}/v2/elements/{sensor_id}'
+    sensor_data_url = lambda self, sensor_id: f'{self.base_url}/v1/data/{sensor_id}'
+
+    _tmp_data_folder = os.path.join(os.getcwd(), f'{name}_tmp')
+
     def __init__(self):
-        self.name = 'CAERetrieverProcessor'
+        # self.name = 'CAERetrieverProcessor'
 
-        # REF: https://arpaebo.caedns.it/datascape/api-doc/index.html (Swagger API Documentation)
-        self.base_urls = 'https://arpaebo.caedns.it/datascape'
-        self.auth_url = f'{self.base_urls}/connect/token'
-        self.sensor_list_url = f'{self.base_urls}/v1/elements'
-        self.location_url = f'{self.base_urls}/v1/locations'
-        self.sensor_specs_url = lambda sensor_id: f'{self.base_urls}/v2/elements/{sensor_id}'
-        self.sensor_data_url = lambda sensor_id: f'{self.base_urls}/v1/data/{sensor_id}'
+        # # REF: https://arpaebo.caedns.it/datascape/api-doc/index.html (Swagger API Documentation)
+        # self.base_url = 'https://arpaebo.caedns.it/datascape'
+        # self.auth_url = f'{self.base_url}/connect/token'
+        # self.sensor_list_url = f'{self.base_url}/v1/elements'
+        # self.location_url = f'{self.base_url}/v1/locations'
+        # self.sensor_specs_url = lambda sensor_id: f'{self.base_url}/v2/elements/{sensor_id}'
+        # self.sensor_data_url = lambda sensor_id: f'{self.base_url}/v1/data/{sensor_id}'
 
-        self._tmp_data_folder = os.path.join(os.getcwd(), f'{self.name}_tmp')
+        # self._tmp_data_folder = os.path.join(os.getcwd(), f'{self.name}_tmp')
         if not os.path.exists(self._tmp_data_folder):
             os.makedirs(self._tmp_data_folder)
 
-        self._cache_data_folder = os.path.join(os.getcwd(), f'{self.name}_cache')
+        # self._cache_data_folder = os.path.join(os.getcwd(), f'{self.name}_cache')
         if not os.path.exists(self._cache_data_folder):
             os.makedirs(self._cache_data_folder)
 
