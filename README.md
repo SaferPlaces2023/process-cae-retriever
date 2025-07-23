@@ -10,7 +10,7 @@ pip install .[pygeoapi]
 
 It will install extra dependecies to use you program as a PyGeoAPI process
 
-# CLI
+## CLI
 
 **Command name**: cae-retriever
 
