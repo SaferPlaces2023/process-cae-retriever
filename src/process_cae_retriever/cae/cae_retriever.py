@@ -173,7 +173,22 @@ class _CAERetriever():
                 auth_data = json.load(f)
             if datetime.datetime.now(datetime.timezone.utc) > datetime.datetime.fromisoformat(auth_data['expires_at']):
                 # DOC: Refresh the token and update the auth_secret file
-                raise StatusException(StatusException.ERROR, "Token expired, please re-authenticate")
+                payload = {
+                    'username': os.getenv("CAE_API_USERNAME", ""),
+                    'password': os.getenv("CAE_API_PASSWORD", ""),
+                    'grant_type': os.getenv("CAE_API_GRANT_TYPE", ""),
+                    'client_id': os.getenv("CAE_API_CLIENT_ID", ""),
+                    'refresh_token': auth_data['refresh_token'],
+                }
+                auth_response = requests.post(self.auth_url, payload, verify=False)
+                if not auth_response.ok:
+                    raise StatusException(StatusException.ERROR, f'Error in re-authentication from {self.auth_url}: {auth_response.status_code} - {auth_response.text}')
+                auth_data = auth_response.json()
+                auth_data['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                auth_data['expires_at'] = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=auth_data['expires_in'])).isoformat()
+                with open(auth_secret, 'w') as f:
+                    json.dump(auth_data, f)
+                Logger.debug('CAE API re-authentication successful')
             else:
                 # DOC: Load the authentication data from the local file
                 auth_data = json.load(open(auth_secret, 'r'))   
