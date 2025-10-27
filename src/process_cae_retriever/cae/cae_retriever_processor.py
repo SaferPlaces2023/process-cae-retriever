@@ -195,8 +195,8 @@ class CAERetrieverProcessor(BaseProcessor):
 
         self.name = 'CAERetrieverProcessor'
 
-        # REF: https://arpaebo.caedns.it/datascape/api-doc/index.html (Swagger API Documentation)
-        self.base_urls = 'https://arpaebo.caedns.it/datascape'
+        # REF: https://arpaebo.caedns.it/platform/api-doc/index.html (Swagger API Documentation)
+        self.base_urls = 'https://arpaebo.caedns.it/platform'
         self.auth_url = f'{self.base_urls}/connect/token'
         self.sensor_list_url = f'{self.base_urls}/v1/elements'
         self.location_url = f'{self.base_urls}/v1/locations'

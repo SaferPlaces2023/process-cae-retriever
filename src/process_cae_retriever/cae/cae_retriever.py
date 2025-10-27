@@ -24,8 +24,8 @@ class _CAERetriever():
 
     name = 'CAERetrieverProcessor'
 
-    # REF: https://arpaebo.caedns.it/datascape/api-doc/index.html (Swagger API Documentation)
-    base_url = 'https://arpaebo.caedns.it/datascape'
+    # REF: https://arpaebo.caedns.it/platform/api-doc/index.html (Swagger API Documentation)
+    base_url = 'https://arpaebo.caedns.it/platform'
     auth_url = f'{base_url}/connect/token'
     sensor_list_url = f'{base_url}/v1/elements'
     location_url = f'{base_url}/v1/locations'
