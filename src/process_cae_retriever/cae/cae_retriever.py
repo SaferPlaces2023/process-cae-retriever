@@ -275,6 +275,8 @@ class _CAERetriever():
             sensor_data = sensor_data_response.json()
             sensor_data_df = pd.DataFrame(sensor_data, columns=['IsoTime', 'Value', 'Quality'])
             sensor_data_df = sensor_data_df[sensor_data_df['Value'].notnull()]
+            if sensors_gdf.at[r_idx, 'quantity'] in ('accumulated_rainfall', 'rainfall_increment'):
+                sensor_data_df['Value'] = sensor_data_df['Value'].diff().fillna(sensor_data_df['Value'])
             sensors_gdf.at[r_idx, 'data'] = [(datetime.datetime.fromisoformat(dt).replace(tzinfo=None), val) for dt,val in zip(sensor_data_df['IsoTime'], sensor_data_df['Value'])]
             Logger.debug(f'Retrieved {len(sensor_data_df)} data points for sensor {sensor_id}')
 
