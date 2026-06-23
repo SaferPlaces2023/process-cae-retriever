@@ -12,7 +12,7 @@ from shapely.geometry import Point
 from ..cli.module_log import Logger
 from ..utils import filesystem, module_s3
 from ..utils.status_exception import StatusException
-
+from ..utils.filesystem import tempdir
 
 urllib3.disable_warnings()
 
@@ -33,8 +33,8 @@ class _CAERetriever():
     sensor_data_url = lambda self, sensor_id: f'{self.base_url}/v1/data/{sensor_id}'
 
     # if CAE_PROCESSOR_MODE use tempdir else use current working directory
-    _tmp_data_folder = os.path.join(tempfile.gettempdir(), f'{name}_tmp') if os.getenv('CAE_PROCESSOR_MODE') == "lambda" else os.path.join(os.getcwd(), f'{name}_tmp')
-    _cache_data_folder = os.path.join(tempfile.gettempdir(), f'{name}_cache') if os.getenv('CAE_PROCESSOR_MODE') == "lambda" else os.path.join(os.getcwd(), f'{name}_cache')
+    _tmp_data_folder = tempdir(f'{name}_tmp') if os.getenv('CAE_PROCESSOR_MODE') == "lambda" else os.path.join(os.getcwd(), f'{name}_tmp')
+    _cache_data_folder = tempdir(f'{name}_cache') if os.getenv('CAE_PROCESSOR_MODE') == "lambda" else os.path.join(os.getcwd(), f'{name}_cache')
 
     def __init__(self):
         
