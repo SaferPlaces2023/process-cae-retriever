@@ -151,51 +151,104 @@ class _CAERetriever():
 
     def retrieve_data(self, long_range, lat_range, time_start, time_end, filters):
 
-        # DOC: Authenticate and get the token (if not already cached)
-        auth_secret = os.path.join(self._cache_data_folder, f'{self.name}_auth.json')
-        if not os.path.exists(auth_secret):
-            # DOC: Authenticate with the CAE API
-            payload = {
-                'username': os.getenv("CAE_API_USERNAME", ""),
-                'password': os.getenv("CAE_API_PASSWORD", ""),
-                'grant_type': os.getenv("CAE_API_GRANT_TYPE", ""),
-                'client_id': os.getenv("CAE_API_CLIENT_ID", ""),
-                'client_instance': uuid.uuid4().hex
-            }
-            auth_response = requests.post(self.auth_url, payload, verify=False)
-            if not auth_response.ok:
-                raise StatusException(StatusException.ERROR, f'Error in authentication from {self.auth_url}: {auth_response.status_code} - {auth_response.text}')
-            auth_data = auth_response.json()
-            auth_data['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            auth_data['expires_at'] = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=auth_data['expires_in'])).isoformat()
-            with open(auth_secret, 'w') as f:
-                json.dump(auth_data, f)
-            Logger.debug('CAE API authentication successful')
-        else:
-            with open(auth_secret, 'r') as f:
-                auth_data = json.load(f)
-            if datetime.datetime.now(datetime.timezone.utc) > datetime.datetime.fromisoformat(auth_data['expires_at']):
-                # DOC: Refresh the token and update the auth_secret file
+        # DOC: Authenticate and get the token (use S3 if CAE_PROCESSOR_MODE=lambda, else use local cache)
+        use_s3_auth = os.getenv('CAE_PROCESSOR_MODE') == "lambda"
+        auth_s3_uri = f's3://saferplaces.co/Directed/auth/{self.name}_auth.json'
+        auth_secret_local = os.path.join(self._cache_data_folder, f'{self.name}_auth.json')
+        
+        if use_s3_auth:
+            # DOC: Use S3 for authentication token storage
+            auth_exists = module_s3.s3_exists(auth_s3_uri)
+            if not auth_exists:
+                # DOC: Authenticate with the CAE API
                 payload = {
                     'username': os.getenv("CAE_API_USERNAME", ""),
                     'password': os.getenv("CAE_API_PASSWORD", ""),
                     'grant_type': os.getenv("CAE_API_GRANT_TYPE", ""),
                     'client_id': os.getenv("CAE_API_CLIENT_ID", ""),
-                    'refresh_token': auth_data['refresh_token'],
+                    'client_instance': uuid.uuid4().hex
                 }
                 auth_response = requests.post(self.auth_url, payload, verify=False)
                 if not auth_response.ok:
-                    raise StatusException(StatusException.ERROR, f'Error in re-authentication from {self.auth_url}: {auth_response.status_code} - {auth_response.text}')
+                    raise StatusException(StatusException.ERROR, f'Error in authentication from {self.auth_url}: {auth_response.status_code} - {auth_response.text}')
                 auth_data = auth_response.json()
                 auth_data['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 auth_data['expires_at'] = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=auth_data['expires_in'])).isoformat()
-                with open(auth_secret, 'w') as f:
+                with open(auth_secret_local, 'w') as f:
                     json.dump(auth_data, f)
-                Logger.debug('CAE API re-authentication successful')
+                module_s3.s3_upload(auth_secret_local, auth_s3_uri)
+                Logger.debug('CAE API authentication successful and saved to S3')
             else:
-                # DOC: Load the authentication data from the local file
-                auth_data = json.load(open(auth_secret, 'r'))   
-                Logger.debug('CAE API authentication loaded from local file')
+                # DOC: Download auth token from S3
+                module_s3.s3_download(auth_s3_uri, auth_secret_local)
+                with open(auth_secret_local, 'r') as f:
+                    auth_data = json.load(f)
+                if datetime.datetime.now(datetime.timezone.utc) > datetime.datetime.fromisoformat(auth_data['expires_at']):
+                    # DOC: Refresh the token and update S3
+                    payload = {
+                        'username': os.getenv("CAE_API_USERNAME", ""),
+                        'password': os.getenv("CAE_API_PASSWORD", ""),
+                        'grant_type': os.getenv("CAE_API_GRANT_TYPE", ""),
+                        'client_id': os.getenv("CAE_API_CLIENT_ID", ""),
+                        'refresh_token': auth_data['refresh_token'],
+                    }
+                    auth_response = requests.post(self.auth_url, payload, verify=False)
+                    if not auth_response.ok:
+                        raise StatusException(StatusException.ERROR, f'Error in re-authentication from {self.auth_url}: {auth_response.status_code} - {auth_response.text}')
+                    auth_data = auth_response.json()
+                    auth_data['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    auth_data['expires_at'] = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=auth_data['expires_in'])).isoformat()
+                    with open(auth_secret_local, 'w') as f:
+                        json.dump(auth_data, f)
+                    module_s3.s3_upload(auth_secret_local, auth_s3_uri)
+                    Logger.debug('CAE API re-authentication successful and updated in S3')
+                else:
+                    # DOC: Load the authentication data from S3
+                    Logger.debug('CAE API authentication loaded from S3')
+        else:
+            # DOC: Use local cache for authentication token storage
+            if not os.path.exists(auth_secret_local):
+                # DOC: Authenticate with the CAE API
+                payload = {
+                    'username': os.getenv("CAE_API_USERNAME", ""),
+                    'password': os.getenv("CAE_API_PASSWORD", ""),
+                    'grant_type': os.getenv("CAE_API_GRANT_TYPE", ""),
+                    'client_id': os.getenv("CAE_API_CLIENT_ID", ""),
+                    'client_instance': uuid.uuid4().hex
+                }
+                auth_response = requests.post(self.auth_url, payload, verify=False)
+                if not auth_response.ok:
+                    raise StatusException(StatusException.ERROR, f'Error in authentication from {self.auth_url}: {auth_response.status_code} - {auth_response.text}')
+                auth_data = auth_response.json()
+                auth_data['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                auth_data['expires_at'] = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=auth_data['expires_in'])).isoformat()
+                with open(auth_secret_local, 'w') as f:
+                    json.dump(auth_data, f)
+                Logger.debug('CAE API authentication successful')
+            else:
+                with open(auth_secret_local, 'r') as f:
+                    auth_data = json.load(f)
+                if datetime.datetime.now(datetime.timezone.utc) > datetime.datetime.fromisoformat(auth_data['expires_at']):
+                    # DOC: Refresh the token and update the local cache
+                    payload = {
+                        'username': os.getenv("CAE_API_USERNAME", ""),
+                        'password': os.getenv("CAE_API_PASSWORD", ""),
+                        'grant_type': os.getenv("CAE_API_GRANT_TYPE", ""),
+                        'client_id': os.getenv("CAE_API_CLIENT_ID", ""),
+                        'refresh_token': auth_data['refresh_token'],
+                    }
+                    auth_response = requests.post(self.auth_url, payload, verify=False)
+                    if not auth_response.ok:
+                        raise StatusException(StatusException.ERROR, f'Error in re-authentication from {self.auth_url}: {auth_response.status_code} - {auth_response.text}')
+                    auth_data = auth_response.json()
+                    auth_data['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    auth_data['expires_at'] = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=auth_data['expires_in'])).isoformat()
+                    with open(auth_secret_local, 'w') as f:
+                        json.dump(auth_data, f)
+                    Logger.debug('CAE API re-authentication successful')
+                else:
+                    # DOC: Load the authentication data from local cache
+                    Logger.debug('CAE API authentication loaded from local cache')
         auth_headers =  { 'Authorization': auth_data['token_type'] + ' ' + auth_data['access_token'] }
 
         # DOC: Retrieve sensor informations (if not already cached)
