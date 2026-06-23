@@ -23,7 +23,8 @@ dependencies = [
   "pandas",
   "geopandas",
   "requests",
-  "boto3"
+  "boto3",
+  "dotenv"
 ]
 
 [project.optional-dependencies]

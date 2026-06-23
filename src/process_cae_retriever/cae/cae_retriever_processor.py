@@ -211,6 +211,25 @@ class CAERetrieverProcessor(BaseProcessor):
         if not os.path.exists(self._cache_data_folder):
             os.makedirs(self._cache_data_folder)
 
+        # Dual-mode configuration
+        self.processor_mode = os.getenv('CAE_PROCESSOR_MODE', 'local').lower()
+        if self.processor_mode not in ['local', 'lambda']:
+            self.processor_mode = 'local'
+        Logger.debug(f'CAE Processor mode: {self.processor_mode}')
+
+        # Lambda configuration (only loaded if mode is lambda)
+        self._lambda_client = None
+        self._lambda_function_name = None
+        self._lambda_region = None
+        if self.processor_mode == 'lambda':
+            self._lambda_function_name = os.getenv('CAE_LAMBDA_FUNCTION_NAME')
+            self._lambda_region = os.getenv('AWS_REGION', 'us-east-1')
+            if not self._lambda_function_name:
+                raise StatusException(
+                    StatusException.INVALID,
+                    'CAE_LAMBDA_FUNCTION_NAME environment variable is required when CAE_PROCESSOR_MODE=lambda'
+                )
+
 
     def argument_validation(self, data):
         """
@@ -229,13 +248,88 @@ class CAERetrieverProcessor(BaseProcessor):
             set_log_debug()
 
 
+    def _get_lambda_client(self):
+        """
+        Get or create boto3 Lambda client (lazy initialization).
+        """
+        if self._lambda_client is None:
+            try:
+                import boto3
+            except ImportError:
+                raise StatusException(
+                    StatusException.ERROR,
+                    'boto3 is required for Lambda mode. Install it with: pip install boto3'
+                )
+            self._lambda_client = boto3.client('lambda', region_name=self._lambda_region)
+        return self._lambda_client
+
+
+    def _invoke_lambda(self, data):
+        """
+        Invoke Lambda function synchronously and return normalized response.
+        """
+        client = self._get_lambda_client()
+        
+        try:
+            # Prepare payload
+            payload = json.dumps(data)
+            Logger.debug(f'Invoking Lambda function: {self._lambda_function_name}')
+            
+            # Invoke synchronously
+            response = client.invoke(
+                FunctionName=self._lambda_function_name,
+                InvocationType='RequestResponse',
+                Payload=payload
+            )
+            
+            # Parse response
+            if response['StatusCode'] != 200:
+                raise StatusException(
+                    StatusException.ERROR,
+                    f'Lambda returned status code {response["StatusCode"]}'
+                )
+            
+            # Extract FunctionResult
+            result_payload = json.load(response['Payload'])
+            Logger.debug(f'Lambda response: {result_payload}')
+            
+            # Handle Lambda response format: {statusCode, body: {result: ...}}
+            if isinstance(result_payload, dict):
+                if 'body' in result_payload and isinstance(result_payload['body'], dict):
+                    return result_payload['body'].get('result', result_payload)
+                elif 'result' in result_payload:
+                    return result_payload['result']
+                else:
+                    return result_payload
+            else:
+                return result_payload
+                
+        except Exception as err:
+            if isinstance(err, StatusException):
+                raise
+            raise StatusException(
+                StatusException.ERROR,
+                f'Lambda invocation failed: {str(err)}'
+            )
+
+
+    def _normalize_output(self, outputs):
+        """
+        Normalize output from either local or Lambda execution to consistent format.
+        """
+        # If output is GeoDataFrame, convert to FeatureCollection
+        if isinstance(outputs, gpd.GeoDataFrame):
+            retriever = _CAERetriever()
+            outputs = retriever.data_to_feature_collection(outputs)
+        
+        return outputs
+
+
     def execute(self, data):
 
         mimetype = 'application/json'
-
         outputs = {}
-
-        CAERetriever = _CAERetriever()
+        cleanup_needed = False
 
         try:
             
@@ -243,12 +337,18 @@ class CAERetrieverProcessor(BaseProcessor):
             self.argument_validation(data)
             Logger.debug(f'Validated process parameters')
 
-            # DOC: Set up the CAE Retriever
-            outputs = CAERetriever.run(**data)
-
-            if type(outputs) is gpd.GeoDataFrame:
-                outputs = CAERetriever.data_to_feature_collection(outputs)
-
+            # DOC: Execute based on processor mode
+            if self.processor_mode == 'lambda':
+                # Lambda mode: invoke external Lambda function
+                Logger.debug(f'Executing in Lambda mode')
+                outputs = self._invoke_lambda(data)
+            else:
+                # Local mode: run retriever locally (default, backward compatible)
+                Logger.debug(f'Executing in local mode')
+                cleanup_needed = True
+                CAERetriever = _CAERetriever()
+                outputs = CAERetriever.run(**data)
+                outputs = self._normalize_output(outputs)
 
         except StatusException as err:
             outputs = {
@@ -261,9 +361,11 @@ class CAERetrieverProcessor(BaseProcessor):
                 'error': str(err)
             }
             raise ProcessorExecuteError(str(err))
-        
-        filesystem.garbage_folders(self._tmp_data_folder)
-        Logger.debug(f'Cleaned up temporary data folder: {self._tmp_data_folder}')
+        finally:
+            # Clean up temporary data folder only in local mode
+            if cleanup_needed:
+                filesystem.garbage_folders(self._tmp_data_folder)
+                Logger.debug(f'Cleaned up temporary data folder: {self._tmp_data_folder}')
         
         return mimetype, outputs
 
