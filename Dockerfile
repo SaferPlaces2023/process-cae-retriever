@@ -29,7 +29,7 @@ WORKDIR /var/task
 # CAE_PROCESSOR_MODE: "local" (default) or "lambda"
 # - "local": Run retriever logic locally in the processor (backward compatible)
 # - "lambda": Invoke Lambda function for processing (requires CAE_LAMBDA_FUNCTION_NAME)
-ENV CAE_PROCESSOR_MODE=local
+ENV CAE_PROCESSOR_MODE=lambda
 ENV AWS_REGION=us-east-1
 # CAE_LAMBDA_FUNCTION_NAME should be set at runtime or via AWS Lambda config
 
