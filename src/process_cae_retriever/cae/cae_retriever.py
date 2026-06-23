@@ -32,8 +32,9 @@ class _CAERetriever():
     sensor_specs_url = lambda self, sensor_id: f'{self.base_url}/v2/elements/{sensor_id}'
     sensor_data_url = lambda self, sensor_id: f'{self.base_url}/v1/data/{sensor_id}'
 
-    _tmp_data_folder = os.path.join(os.getcwd(), f'{name}_tmp')
-    _cache_data_folder = os.path.join(os.getcwd(), f'{name}_cache')
+    # if CAE_PROCESSOR_MODE use tempdir else use current working directory
+    _tmp_data_folder = os.path.join(tempfile.gettempdir(), f'{name}_tmp') if os.getenv('CAE_PROCESSOR_MODE') == "lambda" else os.path.join(os.getcwd(), f'{name}_tmp')
+    _cache_data_folder = os.path.join(tempfile.gettempdir(), f'{name}_cache') if os.getenv('CAE_PROCESSOR_MODE') == "lambda" else os.path.join(os.getcwd(), f'{name}_cache')
 
     def __init__(self):
         
